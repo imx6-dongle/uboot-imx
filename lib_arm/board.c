@@ -109,9 +109,10 @@ void mem_malloc_init (ulong dest_addr)
 	mem_malloc_start = dest_addr;
 	mem_malloc_end = dest_addr + CONFIG_SYS_MALLOC_LEN;
 	mem_malloc_brk = mem_malloc_start;
-
+#ifndef CONFIG_MEM_MALLOC_INIT_FAST
 	memset ((void *) mem_malloc_start, 0,
 			mem_malloc_end - mem_malloc_start);
+#endif
 }
 
 void *sbrk (ptrdiff_t increment)
@@ -123,7 +124,9 @@ void *sbrk (ptrdiff_t increment)
 		return (NULL);
 	}
 	mem_malloc_brk = new;
-
+#ifdef CONFIG_MEM_MALLOC_INIT_FAST
+	if(increment>0) memset((void*)old, 0, increment);
+#endif
 	return ((void *) old);
 }
 
@@ -176,6 +179,9 @@ static int init_baudrate (void)
 
 static int display_banner (void)
 {
+#ifdef CONFIG_CONSOLE_QUIET
+	dmesg_puts("\n\nRunning Bootloader\n");
+#endif
 	printf ("\n\n%s\n\n", version_string);
 	debug ("U-Boot code: %08lX -> %08lX  BSS: -> %08lX\n",
 	       _armboot_start, _bss_start, _bss_end);

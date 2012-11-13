@@ -12,7 +12,7 @@ extern char * strrchr(const char * s, int c);
 #undef __HAVE_ARCH_STRCHR
 extern char * strchr(const char * s, int c);
 
-#undef __HAVE_ARCH_MEMCPY
+#define __HAVE_ARCH_MEMCPY 1
 extern void * memcpy(void *, const void *, __kernel_size_t);
 
 #undef __HAVE_ARCH_MEMMOVE
@@ -22,7 +22,7 @@ extern void * memmove(void *, const void *, __kernel_size_t);
 extern void * memchr(const void *, int, __kernel_size_t);
 
 #undef __HAVE_ARCH_MEMZERO
-#undef __HAVE_ARCH_MEMSET
+#define __HAVE_ARCH_MEMSET 1
 extern void * memset(void *, int, __kernel_size_t);
 
 #if 0

@@ -29,6 +29,32 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#if defined(CONFIG_CONSOLE_QUIET)
+int console_quiet = 1;
+static int console_dmesg_cnt;
+static char console_dmesg[CONFIG_CONSOLE_QUIET];
+static void dmesg_logs(const char* s) {
+  int i=0;
+  while(console_dmesg_cnt<(CONFIG_CONSOLE_QUIET-1)) {
+    if(s[i]==0) break;
+    console_dmesg[console_dmesg_cnt++]=s[i++];
+  };
+};
+void dmesg_dump(void) {
+  console_dmesg[console_dmesg_cnt]=0;
+  console_dmesg_cnt=0;
+  console_quiet=0;
+  puts(console_dmesg);
+  printf("\n");
+};
+void dmesg_puts(char* s) {
+  int save = console_quiet;
+  console_quiet = 0;
+  puts(s);
+  console_quiet = save;
+};
+#endif
+
 #ifdef CONFIG_AMIGAONEG3SE
 int console_changed = 0;
 #endif
@@ -121,6 +147,12 @@ static int console_tstc(int file)
 	int i, ret;
 	struct stdio_dev *dev;
 
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  return 0;
+	};
+#endif
+
 	disable_ctrlc(1);
 	for (i = 0; i < cd_count[file]; i++) {
 		dev = console_devices[file][i];
@@ -143,6 +175,14 @@ static void console_putc(int file, const char c)
 	int i;
 	struct stdio_dev *dev;
 
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  char s[2] = { c, 0};
+	  dmesg_logs(s);
+	  return;
+	};
+#endif
+
 	for (i = 0; i < cd_count[file]; i++) {
 		dev = console_devices[file][i];
 		if (dev->putc != NULL)
@@ -154,6 +194,13 @@ static void console_puts(int file, const char *s)
 {
 	int i;
 	struct stdio_dev *dev;
+
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  dmesg_logs(s);
+	  return;
+	};
+#endif
 
 	for (i = 0; i < cd_count[file]; i++) {
 		dev = console_devices[file][i];
@@ -179,16 +226,34 @@ static inline int console_getc(int file)
 
 static inline int console_tstc(int file)
 {
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  return 0;
+	};
+#endif
 	return stdio_devices[file]->tstc();
 }
 
 static inline void console_putc(int file, const char c)
 {
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  char s[2] = { c, 0};
+	  dmesg_logs(s);
+	  return;
+	};
+#endif
 	stdio_devices[file]->putc(c);
 }
 
 static inline void console_puts(int file, const char *s)
 {
+#if defined(CONFIG_CONSOLE_QUIET)
+	if(console_quiet) {
+	  dmesg_logs(s);
+	  return;
+	};
+#endif
 	stdio_devices[file]->puts(s);
 }
 
@@ -219,7 +284,18 @@ void serial_printf(const char *fmt, ...)
 	i = vsprintf(printbuffer, fmt, args);
 	va_end(args);
 
+#ifdef CONFIG_CONSOLE_QUIET
+	  if(console_quiet) {
+	    dmesg_logs(printbuffer);
+	    return;
+	  }
+	  else {
+#endif
+
 	serial_puts(printbuffer);
+#ifdef CONFIG_CONSOLE_QUIET
+	  };
+#endif
 }
 
 int fgetc(int file)
@@ -269,6 +345,13 @@ void fputc(int file, const char c)
 
 void fputs(int file, const char *s)
 {
+	#if defined(CONFIG_CONSOLE_QUIET)
+	  if(console_quiet) {
+	    dmesg_logs(s);
+	    return;
+	  };
+	#endif
+
 	if (file < MAX_FILES)
 		console_puts(file, s);
 }
@@ -311,6 +394,12 @@ int getc(void)
 
 int tstc(void)
 {
+#ifdef CONFIG_CONSOLE_QUIET
+        if(console_quiet) {
+	        return 0;
+	}
+#endif
+
 #ifdef CONFIG_DISABLE_CONSOLE
 	if (gd->flags & GD_FLG_DISABLE_CONSOLE)
 		return 0;
@@ -341,8 +430,19 @@ void putc(const char c)
 		/* Send to the standard output */
 		fputc(stdout, c);
 	} else {
+#ifdef CONFIG_CONSOLE_QUIET
+	  if(console_quiet) {
+	    char s[2] = { c, 0 };
+	    dmesg_logs(s);
+	    return;
+	  }
+	  else {
+#endif
 		/* Send directly to the handler */
 		serial_putc(c);
+#ifdef CONFIG_CONSOLE_QUIET
+	  }
+#endif
 	}
 }
 
@@ -362,8 +462,18 @@ void puts(const char *s)
 		/* Send to the standard output */
 		fputs(stdout, s);
 	} else {
+#ifdef CONFIG_CONSOLE_QUIET
+	  if(console_quiet) {
+	    dmesg_logs(s);
+	    return;
+	  }
+	  else {
+#endif
 		/* Send directly to the handler */
 		serial_puts(s);
+#ifdef CONFIG_CONSOLE_QUIET
+	  };
+#endif
 	}
 }
 

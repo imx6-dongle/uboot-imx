@@ -137,6 +137,22 @@ next:
 	bl	cpu_init_crit
 #endif
 
+	/* Set up the stack */
+stack_setup:
+	ldr	r0, _TEXT_BASE		@ upper 128 KiB: relocated uboot
+	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN @ malloc area
+	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE @ bdinfo
+#ifdef CONFIG_USE_IRQ
+	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ + CONFIG_STACKSIZE_FIQ)
+#endif
+	sub	sp, r0, #12		@ leave 3 words for abort-stack
+	and	sp, sp, #~7		@ 8 byte alinged for (ldr/str)d
+
+#ifdef CONFIG_ARCH_MMU
+	bl board_mmu_init
+#endif
+
+
 #ifndef CONFIG_SKIP_RELOCATE_UBOOT
 relocate:				@ relocate U-Boot to RAM
 	adr	r0, _start		@ r0 <- current position of code
@@ -156,17 +172,6 @@ copy_loop:				@ copy 32 bytes at a time
 	ble	copy_loop
 #endif	/* CONFIG_SKIP_RELOCATE_UBOOT */
 
-	/* Set up the stack */
-stack_setup:
-	ldr	r0, _TEXT_BASE		@ upper 128 KiB: relocated uboot
-	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN @ malloc area
-	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE @ bdinfo
-#ifdef CONFIG_USE_IRQ
-	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ + CONFIG_STACKSIZE_FIQ)
-#endif
-	sub	sp, r0, #12		@ leave 3 words for abort-stack
-	and	sp, sp, #~7		@ 8 byte alinged for (ldr/str)d
-
 	/* Clear BSS (if any). Is below tx (watch load addr - need space) */
 clear_bss:
 	ldr	r0, _bss_start		@ find start of bss segment
@@ -178,9 +183,6 @@ clbss_l:
 	add	r0, r0, #4		@ increment clear index pointer
 	bne	clbss_l			@ keep clearing till at end
 
-#ifdef CONFIG_ARCH_MMU
-	bl board_mmu_init
-#endif
 	ldr	pc, _start_armboot	@ jump to C code
 
 _start_armboot: .word start_armboot
@@ -504,3 +506,76 @@ finished_inval:
 						@ but we compile with armv5
 
 	ldmfd	r13!, {r0 - r5, r7, r9 - r12, pc}
+
+/*      
+ * dcache_line_size - get the minimum D-cache line size from the CTR register
+ * on ARMv7.
+ */       
+        .macro  dcache_line_size, reg, tmp
+        mrc     p15, 0, \tmp, c0, c0, 1         @ read ctr
+        lsr     \tmp, \tmp, #16
+        and     \tmp, \tmp, #0xf                @ cache line size encoding
+        mov     \reg, #4                        @ bytes per word
+        mov     \reg, \reg, lsl \tmp            @ actual cache line size
+        .endm
+
+
+/*
+ *      v7_dma_inv_range(start,end)
+ *
+ *      Invalidate the data cache within the specified region; we will
+ *      be performing a DMA operation in this region and we want to
+ *      purge old data in the cache.
+ *
+ *      - start   - virtual start address of region
+ *      - end     - virtual end address of region
+ */
+
+	.align 5
+.global v7_dma_inv_range
+v7_dma_inv_range:
+        dcache_line_size r2, r3
+        sub     r3, r2, #1
+        tst     r0, r3
+        bic     r0, r0, r3
+#ifdef CONFIG_ARM_ERRATA_764369
+        ALT_SMP(W(dsb))
+        ALT_UP(W(nop))
+#endif
+        mcrne   p15, 0, r0, c7, c14, 1          @ clean & invalidate D / U line
+
+        tst     r1, r3
+        bic     r1, r1, r3
+        mcrne   p15, 0, r1, c7, c14, 1          @ clean & invalidate D / U line
+1:
+        mcr     p15, 0, r0, c7, c6, 1           @ invalidate D / U line
+        add     r0, r0, r2
+        cmp     r0, r1
+        blo     1b
+        dsb
+        mov     pc, lr
+
+/*
+ *      v7_dma_clean_range(start,end)
+ *      - start   - virtual start address of region
+ *      - end     - virtual end address of region
+ */
+	.align 5
+.global v7_dma_clean_range
+v7_dma_clean_range:
+        dcache_line_size r2, r3
+        sub     r3, r2, #1
+        bic     r0, r0, r3
+#ifdef CONFIG_ARM_ERRATA_764369
+        ALT_SMP(W(dsb))
+        ALT_UP(W(nop))
+#endif
+1:
+        mcr     p15, 0, r0, c7, c10, 1          @ clean D / U line
+        add     r0, r0, r2
+        cmp     r0, r1
+        blo     1b
+        dsb
+        mov     pc, lr
+
+

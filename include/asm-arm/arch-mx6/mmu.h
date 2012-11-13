@@ -138,6 +138,7 @@ union ARM_MMU_FIRST_LEVEL_DESCRIPTOR {
  * Translate the virtual address of ram space to physical address
  * It is dependent on the implementation of mmu_init
  */
+#if 0
 inline unsigned long iomem_to_phys(unsigned long virt)
 {
 #ifndef CONFIG_MX6Q_ARM2_LPDDR2POP
@@ -187,5 +188,40 @@ void __iounmap(void *addr)
 {
 	return;
 }
+#else
+
+#ifndef CONFIG_MX6Q_ARM2_LPDDR2POP
+#define iomem_to_phys(virt) 														\
+		((virt >= 0x88000000 && virt <= 0xffffffff) ? (virt - 0x78000000) : virt)
+#else
+	/* bank 2 : virt 0x20000000 ~ phy 0x80000000, size 256MB */
+#define iomem_to_phys(virt) \
+		((virt >= 0x20000000 && virt <= 0x30000000) ? (virt + 0x60000000) : virt)
+#endif
+
+/*
+ * remap the physical address of ram space to uncacheable virtual address space
+ * It is dependent on the implementation of hal_mmu_init
+ */
+
+#ifndef CONFIG_MX6Q_ARM2_LPDDR2POP
+
+#define __ioremap(offset, size, flags) 									\
+	( (1 == flags) ? ( (offset >= PHYS_SDRAM_1 &&						\
+		offset < (unsigned long)(PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE)) ? ((void *)(offset + 0x78000000)) : (NULL) ) 	\
+		: ((void *)offset) )
+#else
+	/*
+	 * In case the cacheable and uncacheable memory don't overlap in
+	 * physical memory, this function is no longer needed, we simply return
+	 * the first address itself
+	 */
+	#define __ioremap(offset, size, flags) ((void *)offset)
+#endif
+
+#define __iounmap(addr) 
+
 
 #endif
+
+#endif /*__ARM_ARCH_MMU_H*/

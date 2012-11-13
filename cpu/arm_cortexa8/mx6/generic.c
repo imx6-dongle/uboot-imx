@@ -1002,6 +1002,31 @@ int cpu_eth_init(bd_t *bis)
 	return rc;
 }
 
+#ifndef CONFIG_L2_OFF
+void l2_cache_enable(void)
+{
+    unsigned long i;
+
+    __asm__ __volatile__("mrc p15, 0, %0, c1, c0, 1":"=r"(i));
+    __asm__ __volatile__("orr %0, %0, #0x2":"=r"(i));
+    __asm__ __volatile__("mcr p15, 0, %0, c1, c0, 1":"=r"(i));
+}
+
+void l2_cache_disable(void)
+{
+    unsigned long i;
+
+    __asm__ __volatile__("mrc p15, 0, %0, c1, c0, 1":"=r"(i));
+    __asm__ __volatile__("bic %0, %0, #0x2":"=r"(i));
+    __asm__ __volatile__("mcr p15, 0, %0, c1, c0, 1":"=r"(i));
+}
+/*dummy function for L2 ON*/
+u32 get_device_type(void)
+{
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_ARCH_CPU_INIT)
 int arch_cpu_init(void)
 {

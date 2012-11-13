@@ -453,6 +453,16 @@ void main_loop (void)
 			reset_cmd_timeout();
 		}
 #endif
+		
+#if defined(CONFIG_CONSOLE_QUIET)
+	do {
+	  extern int console_quiet;
+	  if(console_quiet==1) {
+	    extern void dmesg_dump(void);
+	    dmesg_dump();
+	  };
+	} while(0);
+#endif
 		len = readline (CONFIG_SYS_PROMPT);
 
 		flag = 0;	/* assume no special flags for now */

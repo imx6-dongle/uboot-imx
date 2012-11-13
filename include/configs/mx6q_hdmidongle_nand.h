@@ -36,8 +36,7 @@
 #define CONFIG_SKIP_RELOCATE_UBOOT
 
 #define CONFIG_ARCH_CPU_INIT
-#undef CONFIG_ARCH_MMU /* disable MMU first */
-#define CONFIG_L2_OFF  /* disable L2 cache first*/
+#define CONFIG_ARCH_MMU 
 
 #define CONFIG_MX6_HCLK_FREQ	24000000
 
@@ -74,6 +73,11 @@
 #define CONFIG_BAUDRATE			115200
 #define CONFIG_SYS_BAUDRATE_TABLE	{9600, 19200, 38400, 57600, 115200}
 
+#define CONFIG_MEM_MALLOC_INIT_FAST
+
+#define CONFIG_CONSOLE_QUIET 4096
+#define CONFIG_CMD_PUTS         1
+
 /***********************************************************
  * Command definition
  ***********************************************************/
@@ -83,19 +87,19 @@
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
+#undef CONFIG_CMD_NET
 #define CONFIG_NET_RETRY_COUNT  100
 #define CONFIG_NET_MULTI 1
 #define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_DNS
 
-#define CONFIG_CMD_SPI
+#undef CONFIG_CMD_SPI
 #define CONFIG_CMD_IMXOTP
 
 /* Enable below configure when supporting nand */
-#define CONFIG_CMD_SF
-#define CONFIG_CMD_MMC
+#undef CONFIG_CMD_SF
+#undef CONFIG_CMD_MMC
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_REGUL
 
@@ -107,7 +111,7 @@
 
 #define CONFIG_CMD_IMX_DOWNLOAD_MODE
 
-#define CONFIG_BOOTDELAY 3
+#define CONFIG_BOOTDELAY 0
 
 #define CONFIG_PRIME	"FEC0"
 

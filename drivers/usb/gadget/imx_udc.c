@@ -30,6 +30,10 @@
 #include <asm/types.h>
 #include <malloc.h>
 #include <command.h>
+#ifdef CONFIG_ARCH_MMU
+#include <asm/mmu.h>
+#include <asm/arch/mmu.h>
+#endif
 #include <asm/errno.h>
 #include <usbdevice.h>
 #include <usb/imx_udc.h>

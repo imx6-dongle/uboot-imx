@@ -36,6 +36,9 @@ GLSOBJS	+= _umodsi3.o
 
 GLCOBJS	+= div0.o
 
+SOBJS-y += memcpy.o
+SOBJS-y += memset.o
+
 COBJS-y	+= board.o
 COBJS-y	+= bootm.o
 COBJS-y	+= cache.o
