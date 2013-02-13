@@ -208,7 +208,7 @@ void __iounmap(void *addr)
 
 #define __ioremap(offset, size, flags) 									\
 	( (1 == flags) ? ( (offset >= PHYS_SDRAM_1 &&						\
-		offset < (unsigned long)(PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE)) ? ((void *)(offset + 0x78000000)) : (NULL) ) 	\
+		offset < (unsigned long)(PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE)) ? ((v7_dma_inv_range((char *)offset, (char *)offset + size)), ((void *)(offset + 0x78000000))) : (NULL) ) 	\
 		: ((void *)offset) )
 #else
 	/*
