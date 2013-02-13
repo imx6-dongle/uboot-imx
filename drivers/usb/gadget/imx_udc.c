@@ -54,6 +54,16 @@
 #define USB_TYPE_MASK	    (0x03 << 5)
 #define USB_MEM_ALIGN_BYTE  4096
 
+#ifdef CONFIG_ARCH_MMU
+extern void dma_inv_range(const void *, const void *);
+extern void dma_flush_range(const void *, const void *);
+
+#define DMA_INV_SIZE(addr,size) v7_dma_inv_range(addr, ((char*)addr)+size)
+#define DMA_FLUSH_SIZE(addr,size) v7_dma_clean_range(addr, ((char*)addr)+size)
+#define DMA_FLUSH_RANGE(start,end) v7_dma_clean_range(start, end);
+
+#endif
+
 typedef struct {
 	int epnum;
 	int dir;
@@ -102,6 +112,7 @@ static void *malloc_dma_buffer(u32 *dmaaddr, int size, int align)
 	vir_align = (vir + align - 1) & (~(align - 1));
 #ifdef CONFIG_ARCH_MMU
 	*dmaaddr = (u32)iomem_to_phys(vir_align);
+        DMA_FLUSH_SIZE(*dmaaddr, msize);
 #else
 	*dmaaddr = vir_align;
 #endif
